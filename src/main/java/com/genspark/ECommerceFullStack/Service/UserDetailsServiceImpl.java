@@ -33,9 +33,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             br.close();
 
             JSONObject json = new JSONObject(new JSONTokener(sb.toString()));
-            System.out.println("JSON Object: " + json.toString());
             JSONArray users = json.getJSONArray("users");
-            System.out.println("users: " + users.toString());
 
             for (int i = 0; i < users.length(); i++) {
                 JSONObject user = users.getJSONObject(i);
