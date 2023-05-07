@@ -19,13 +19,21 @@ public class UserController {
         return this.userService.getAllUsers();
     }
 
-    @GetMapping("/")
-    public User getUserByID(int userId) {
-        return this.userService.getUserById(userId);
+    @GetMapping("/{username}")
+    public User getUserByID(@PathVariable String username) {
+        return this.userService.getUserById(username);
     }
 
     @PostMapping
     public User addUser(@RequestBody User user) {
         return this.userService.addUser(user);
     }
+
+    @DeleteMapping("/{username}")
+    public String deleteUser(@PathVariable String username) {
+        return this.userService.deleteUser(username);
+    }
+
+    @PutMapping("/{username}/{productID}")
+    public User updateUser(@PathVariable String username, @PathVariable String productID) { return this.userService.updateUser(username, Integer.parseInt(productID)); }
 }

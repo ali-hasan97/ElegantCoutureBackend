@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -39,10 +40,15 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 JSONObject user = users.getJSONObject(i);
                 if (username.equals(user.getString("username"))) {
                     String password = user.getString("password");
+                    JSONArray productIDJson = user.getJSONArray("productID");
+                    List<Integer> newProductIDList = new ArrayList<>();
+                    for (int j = 0; j < productIDJson.length(); j++) {
+                        newProductIDList.add(productIDJson.getInt(j));
+                    }
                     String role = user.getString("role");
                     List<GrantedAuthority> authorities = AuthorityUtils.createAuthorityList("ROLE_" + role);
                     System.out.println(username + password + authorities);
-                    return new CustomUserDetails(new User(username, password, authorities));
+                    return new CustomUserDetails(new User(username, password, newProductIDList, authorities));
                 }
             }
 

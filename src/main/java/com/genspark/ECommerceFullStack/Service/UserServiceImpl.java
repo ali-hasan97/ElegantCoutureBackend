@@ -15,6 +15,7 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -22,7 +23,7 @@ public class UserServiceImpl implements UserService{
 
     PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public void JsonReader(User user) {
+    public JSONArray JsonReader() {
         try {
             BufferedReader br = new BufferedReader(new FileReader("src/main/resources/auth.json"));
             System.out.println("file found");
@@ -35,20 +36,11 @@ public class UserServiceImpl implements UserService{
 
             JSONObject json = new JSONObject(new JSONTokener(sb.toString()));
             JSONArray users = json.getJSONArray("users");
-            JSONObject userObj = new JSONObject();
 
-            userObj.put("username", user.getUsername());
-            userObj.put("password",passwordEncoder.encode(user.getPassword()));
-            userObj.put("role", "normal");
-
-            users.put(userObj);
-
-            JSONObject newJson = new JSONObject();
-            newJson.put("users", users);
-
-            JsonWriter(newJson);
+            return users;
         } catch (Exception e) {
             System.out.println("File unable to be read");
+            return new JSONArray();
         }
     }
 
@@ -66,52 +58,98 @@ public class UserServiceImpl implements UserService{
     @Override
     public List<User> getAllUsers() {
         List<User> userList = new ArrayList<>();
-        try {
-            BufferedReader br = new BufferedReader(new FileReader("src/main/resources/auth.json"));
-            System.out.println("file found");
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
+        JSONArray users = JsonReader();
+        for (int i = 0; i < users.length(); i++) {
+            JSONObject userJson = users.getJSONObject(i);
+            String username = userJson.getString("username");
+            String password = userJson.getString("password");
+            JSONArray productIDJson = userJson.getJSONArray("productID");
+            List<Integer> newProductIDList = new ArrayList<>();
+            for (int j = 0; j < productIDJson.length(); j++) {
+                newProductIDList.add(productIDJson.getInt(j));
             }
-            br.close();
-
-            JSONObject json = new JSONObject(new JSONTokener(sb.toString()));
-            JSONArray users = json.getJSONArray("users");
-
-            for (int i = 0; i < users.length(); i++) {
-                JSONObject userJson = users.getJSONObject(i);
-                String username = userJson.getString("username");
-                String password = userJson.getString("password");
-                String role = userJson.getString("role");
-                List<GrantedAuthority> authorities = AuthorityUtils.createAuthorityList("ROLE_" + role);
-                User user = new User(username, password, authorities);
-                userList.add(user);
-            }
-        } catch (Exception e) {
-            System.out.println("Could not retrieve users array from file.");
+            String role = userJson.getString("role");
+            List<GrantedAuthority> authorities = AuthorityUtils.createAuthorityList("ROLE_" + role);
+            User user = new User(username, password, newProductIDList, authorities);
+            userList.add(user);
         }
         return userList;
     }
 
     @Override
-    public User getUserById(int UserID) {
+    public User getUserById(String username) {
+        JSONArray users = JsonReader();
+        for (int i = 0; i < users.length(); i++) {
+            JSONObject userJson = users.getJSONObject(i);
+            if (userJson.getString("username").equals(username)) {
+                JSONArray productIDJson = userJson.getJSONArray("productID");
+                List<Integer> newProductIDList = new ArrayList<>();
+                for (int j = 0; j < productIDJson.length(); j++) {
+                    newProductIDList.add(productIDJson.getInt(j));
+                }
+                return new User(userJson.getString("username"), userJson.getString("password"), newProductIDList, AuthorityUtils.createAuthorityList("ROLE_" + userJson.getString("role")));
+            }
+        }
         return new User();
     }
 
     @Override
     public User addUser(User user) {
-        JsonReader(user);
+        JSONArray users = JsonReader();
+
+        JSONObject userObj = new JSONObject();
+        userObj.put("username", user.getUsername());
+        userObj.put("password",passwordEncoder.encode(user.getPassword()));
+        userObj.put("role", "normal");
+
+        users.put(userObj);
+
+        JSONObject newJson = new JSONObject();
+        newJson.put("users", users);
+
+        JsonWriter(newJson);
+
         return user;
     }
 
     @Override
-    public User updateUser(User user) {
-        return null;
+    public User updateUser(String username, int productID) {
+        JSONArray users = JsonReader();
+        User modifiedUser = new User();
+        for (int i = 0; i < users.length(); i++) {
+            JSONObject userJson = users.getJSONObject(i);
+            if (userJson.getString("username").equals(username)) {
+                JSONArray productIDJson = userJson.getJSONArray("productID");
+                List<Integer> newProductIDList = new ArrayList<>();
+                for (int j = 0; j < productIDJson.length(); j++) {
+                    newProductIDList.add(productIDJson.getInt(j));
+                }
+                newProductIDList.add(productID);
+                modifiedUser = new User(userJson.getString("username"), userJson.getString("password"), newProductIDList, AuthorityUtils.createAuthorityList("ROLE_" + userJson.getString("role")));
+            }
+        }
+        return modifiedUser;
     }
 
     @Override
-    public String deleteUser() {
-        return null;
+    public String deleteUser(String username) {
+        String message = "User not found.";
+
+        JSONArray users = JsonReader();
+        JSONArray newUsers = new JSONArray();
+        for (int i = 0; i < users.length(); i++) {
+            JSONObject userJson = users.getJSONObject(i);
+            if (!userJson.getString("username").equals(username)) {
+                newUsers.put(userJson);
+            } else {
+                message = "Successfully deleted!";
+            }
+        }
+
+        JSONObject newJson = new JSONObject();
+        newJson.put("users", newUsers);
+        JsonWriter(newJson);
+
+        return message;
     }
 }
